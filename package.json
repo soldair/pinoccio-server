@@ -1,0 +1,21 @@
+{
+  "name": "pinoccio-server",
+  "description": " pinoccio command server for your local network. proxies to the pinocc.io api for historical data streams and outside access!",
+  "version": "0.0.0",
+  "repository": {
+    "url": "git://github.com/soldair/pinoccio-server.git"
+  },
+  "main": "index.js",
+  "scripts": {
+    "test": "tape test/*.js"
+  },
+  "author": "Ryan Day",
+  "dependencies": {
+    "through": "^2.3.4",
+    "split": "^0.3.0",
+    "duplex": "^1.0.0"
+  },
+  "devDependencies": {
+    "tape": "~2.3.2"
+  }
+}
