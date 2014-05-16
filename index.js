@@ -1,5 +1,5 @@
 
-var commands = require('./commands.js') 
+var commands = require('./troop.js') 
 var bridge = require('./bridge.js');
 var net = require('net');
 // todo tls server. this should hold both ports open 22756 and 22757 tls

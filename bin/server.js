@@ -3,7 +3,7 @@
 // this is an example server!
 // it shows you how to use this awesome thing!
 
-var server = require('../server.js')
+var server = require('../')
 
 
 server({
