@@ -37,18 +37,32 @@ module.exports = function(socket,readycb){
   var stream = through();
 
   stream.command = function(scout,command,cb){
+    if(!stream.token) return setImmediate(function(){
+      cb(new Error('not ready'));
+    });
+
     sendCommand({
       to:scout,
       command:command
     },cb);
   };
 
-  stream._commandStreams = [];
+  stream._commandStreams = {};
+  stream._commandStreamInc = 0;
   stream.commandStream = function(){
     // TODO this is how other servers send commands to this server.
     // this stream gets data events of commands.
     // this stream outputs the event stream
-    throw "todo"; 
+    var s = through(function(data){
+      sendCommand(data);
+    });
+    var id = stream._commandStreamInc++;
+    stream._commandStreams[id] = s;
+
+    s.id = id;
+
+    return s;
+
   }
 
   stream.sendCommand = sendCommand;
@@ -61,7 +75,7 @@ module.exports = function(socket,readycb){
 
   function handle(js,line){
     // handle message from board.
-    stream.log("handle",stream.token,js,typeof js);
+    //stream.log("handle",stream.token,line);
 
     var hasToken = stream.token;
     if(js.type == "token") {
@@ -84,7 +98,6 @@ module.exports = function(socket,readycb){
     if(js.type == 'reply'){
 
       o = stream.callbacks[js.id]||{};
-
 
       if(o.id === undefined) return stream.log('got reply with no id mapping! ',js);
 
@@ -113,8 +126,8 @@ module.exports = function(socket,readycb){
       }
 
     } else if(js.type == "report" && line == stream._lastreport){
-      // duplicate reports are not really useful to propagate as events
-      return stream.log('duplicate report ',line);
+      // duplicate reports are not really useful to propagate as events because nothing changed.
+      return;// stream.log('duplicate report ',line);
     } else if (js.type == "report") {
       stream._lastreport = line;
       stream.queue(js);// send report in stream.
@@ -179,6 +192,8 @@ module.exports = function(socket,readycb){
   
     return js;
   }
+
+  return stream;
 }
 
 function json(s){
