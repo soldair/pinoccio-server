@@ -8,11 +8,6 @@ the neat thing is that if you use this server HQ will still work and you can sti
 ```js
 var server = require('pinoccio-server');
 
-// this listens on 22376 which is the default api server port in the firmware.
-// you will have to flash firmware that has tyou local servers ip address
-// https://github.com/Pinoccio/library-pinoccio/blob/master/src/hq/HqInfo.cpp#L18
-// you shouldn't hijack the dns because that will cause bridging to hq to fail.
-
 server(function(troop){
 
   troop.command(1,'led.red',function(err,data){
