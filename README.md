@@ -43,3 +43,16 @@ var bridge = require('pinoccio-server/bridge');
 // example todo ....
 
 ```
+
+SETUP
+=====
+
+- you will need to update your firmware to connect to your local server.
+  - check out https://pinocc.io/solo for help getting started with the arduino ide
+- update the ip adress to point to your local server
+  - https://github.com/Pinoccio/library-pinoccio/blob/master/src/hq/HqInfo.cpp#L18
+- test with the example server
+  - `./bin/server.js`
+- write a local server!
+  - you can base it off of the example server in bin/server.js! expose your own http interface whatever you need!
+
