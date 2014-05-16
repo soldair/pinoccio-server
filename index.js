@@ -1,203 +1,42 @@
-// the pinoccio json event stream/rpc protocol
-var split = require('split');
-var through = require('through');
-var maxId = 255;// this can be bigger.
 
-module.exports = function(socket,readycb){
+var commands = require('./commands.js') 
+var bridge = require('./bridge.js');
+var net = require('net');
+// todo tls server. this should hold both ports open 22756 and 22757 tls
 
-  // wait 60 seconds for the connection to present a token before kicking off.
-  var readyTimeout = setTimeout(function(){
-    if(!stream.token) {
-      readycb(new Error('stream never authenticated'));
-      readycb = function(){};
-      stream.log('stream never authenticated.');
-      socket.destroy();
-    }
-  },60000);// make configurable
+module.exports = function(options,onConnection){
+  options = options||{};
+  if(typeof options === 'function') {
+    onConnection = options;
+    options = {};
+  }
 
-  var fromBoard = split();
-  fromBoard.pipe(through(function(line){
-    stream.lastLine = Date.now();
-    var js = json(line);
-    if(js) handle(js, line);
-    else handleInvalidJSON(line);    
-  },function(){
-    this.queue('null');
-    stream.end();
-  }));
+  options.apiHost = options.apiHost||'pool.base.pinocc.io';
+  options.apiPort = options.apiPort||22756;
+  options.port = options.port||22756;
 
-  var toBoard = through(function(js){
-    this.queue(JSON.stringify(js)+"\n");
-  })
+  var server = net.createServer(function(con){
+    var i = 0, s;
 
-  socket.pipe(fromBoard);
-  toBoard.pipe(socket);
+    s = commands(con,function(err){
+      if(err) {
+        // todo figure out right way to handle this.
+        console.error('could not start command stream. closing connection. ',err);
+        return con.destroy();
+      }
 
-  /// troop events stream. and public interface
-  var stream = through();
-
-  stream.command = function(scout,command,cb){
-    if(!stream.token) return setImmediate(function(){
-      cb(new Error('not ready'));
+      s.pipe(bridge({host:options.apiHost,port:options.apiPort})).pipe(s.commandStream());
+      onConnection(s);
     });
 
-    sendCommand({
-      to:scout,
-      command:command
-    },cb);
-  };
+  });
 
-  stream._commandStreams = {};
-  stream._commandStreamInc = 0;
-  stream.commandStream = function(){
-    // TODO this is how other servers send commands to this server.
-    // this stream gets data events of commands.
-    // this stream outputs the event stream
-    var s = through(function(data){
-      sendCommand(data);
-    });
-    var id = stream._commandStreamInc++;
-    stream._commandStreams[id] = s;
+  server.listen(options.port,function(err){
+    if(err) throw err;
+  });
 
-    s.id = id;
+  return server;
 
-    return s;
-
-  }
-
-  stream.sendCommand = sendCommand;
-
-  stream.inc = 0;
-  stream.callbacks = {};
-  stream.lastLine = Date.now();  
-  stream.log = console.log.bind(console);
-  stream.troop = false;// cannot send commands to boards that have not provided a token.
-
-  function handle(js,line){
-    // handle message from board.
-    //stream.log("handle",stream.token,line);
-
-    var hasToken = stream.token;
-    if(js.type == "token") {
-
-      stream.log("troop auth",js.token);
-
-      // send in event stream.
-      stream.queue(js); 
-      stream.token = js.token;
-
-      if(!hasToken) {
-        readycb(false,stream);
-        clearTimeout(readyTimeout); 
-      }
-      return;
-    }
-
-    if(!stream.token) return stream.log('data from socket before auth/id token.',js);
-
-    if(js.type == 'reply'){
-
-      o = stream.callbacks[js.id]||{};
-
-      if(o.id === undefined) return stream.log('got reply with no id mapping! ',js);
-
-      var output = js.reply||js.output;
-      var ret = js.return;// not set yet.
-
-      if(output){
-        if(!o.output) o.output = "";
-        // handle chunked responses. they come in order.
-        o.output += js.reply||js.output;
-      }
-
-      // soon the firmware will support returning the return int value of the scout script function/expression. it willbe the property return.
-      if(ret) {
-        o.return = ret;
-      }
-
-      js._cid = js.id;
-      js.id = o.id;
-
-      if(js.err || js.end) {
-        delete stream.callbacks[js._cid];
-        js.reply = js.output = o.output;
-        js.return = o.return;
-        o.cb(js.err,js)
-      }
-
-    } else if(js.type == "report" && line == stream._lastreport){
-      // duplicate reports are not really useful to propagate as events because nothing changed.
-      return;// stream.log('duplicate report ',line);
-    } else if (js.type == "report") {
-      stream._lastreport = line;
-      stream.queue(js);// send report in stream.
-    } else {
-      stream.log('unknown message type',js);
-    }
-  }
-
-  function handleInvalidJSON(line){
-    stream.log('invalid json todo',line);
-  }
-
-  // command format
-  // 
-  /*
-  {
-    type:"command",
-    to:+scout,
-    timeout:10000,// option timeout defaults to 10000
-    command:"print millis;"
-  }
-  */
-  // just send a command!
-  function sendCommand(js,cb){
-    var id = ++stream.inc;
-    if(!js.id) js.id = 0;// default input id.
-
-    var start = Date.now();
-    var timeCallback = function(err,js){
-      js.basetime = Date.now()-start;// decorate performance time.
-      if(cb) cb(err,js)
-    }
-
-    if(js.timeout == undefined) js.timeout = 10000;
-    else if(js.timeout < 0) {
-      js.timeout = 60000;// 60 seconds max timeout
-    } else if(js.timeout > 60000){
-      js.timeout = 60000; 
-    }
-    
-    var timeout = js.timeout;
-    setTimeout(function(){
-      if(stream.callbacks[id]) {
-        // make reply js
-        js.type = "reply";
-        js.err = "base timeout in "+timeout+" ms";
-        js.timeout = timeout;
-        js.timeerror = true;
-        js.from = js.to;
-        delete js.to;
-        timeCallback(true,js);
-      }
-    },timeout);
-
-    stream.callbacks[id] = {id:js.id,cb:timeCallback};
-    js.id = id;
-
-    if(stream.inc > maxId) stream.inc = 1;
-
-    js.type = "command";
-    toBoard.write(js);
-  
-    return js;
-  }
-
-  return stream;
 }
 
-function json(s){
-  try{
-    return JSON.parse(s);
-  } catch(e){}
-}
+
