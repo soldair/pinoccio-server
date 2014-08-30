@@ -26,16 +26,27 @@ module.exports = function(options){
     connected = true;
     // auth
     if(token) {
+      console.log('NO TOKEN IN CONNECTION EVENT!');
       send();
     }
+
+    ensurePipe();
+    ensureToken();
+
+    //con.on('data',function(data){
+      //console.log('from carlo>>'+data);
+    //});
+
     // resume.
   }).on('disconnect',function(){
+    //console.log('disconnect!');
     connected = false;
   });
 
   recon.connect({host:options.host||"pool.base.pinocc.io",port:options.port||22756});
 
   function send(data){
+    //console.log('to carlo << ',JSON.stringify(data));
     if(connected) {
       ensurePipe();
       if(ensureToken(data) === true) return;
@@ -43,25 +54,6 @@ module.exports = function(options){
     } else {
       // dropping on the floor. todo buffer
       s.emit('drop',data);
-    }
-  }
-
-  function ensureToken(data){
-    if(!connected) return;
-    if(!con.sentToken){
-      if(!token) throw JSON.stringify(data);
-      con.sentToken = true;
-      con.write(JSON.stringify(token)+"\n");
-      if(data && data.type === 'token') return true;
-    }
-  }
-
-  function ensurePipe(){
-    if(con && !con.piped) {
-      con.piped = true;
-      con.pipe(split()).pipe(through(function(data){
-        s.queue(json(data)); 
-      }));
     }
   }
 
@@ -74,21 +66,63 @@ module.exports = function(options){
   });
 
   s.on('pipe',function(serverStream){
+
+    //console.log('PIPE!',token,serverStream.token,connected);
+
     // someone piped to me.
     if(serverStream.token) {
       token = {token:serverStream.token,type:'token',bridge:version};
     }
 
     if(connected) send();
-  });
-
-  s.on('end',function(){
+  }).on('end',function(){
     reconnect.disconnect();
   }).on('error',function(){
     reconnect.disconnect();
   });
 
   s.reconnect = recon;
+
+  function ensureToken(data){
+
+    console.log('ENSURE TOKEN'.data);
+
+    if(!connected) {
+
+      console.log('1 not connected');
+      return;
+    }
+    if(!con.sentToken){
+
+
+      console.log('3 not sent token',token);
+
+      if(!token) {
+        if(data) console.log("[ERROR] cannot send data before sending token and i have no token to send yet!");
+        return;
+      } 
+
+      con.sentToken = true;
+      con.write(JSON.stringify(token)+"\n");
+
+      console.log('4 sending token!',token);
+
+      if(data && data.type === 'token') return true;
+    } else {
+      console.log('2 sent token already');
+    }
+  }
+
+  function ensurePipe(){
+    if(con && !con.piped) {
+      con.piped = true;
+      con.pipe(split()).pipe(through(function(data){
+        console.log('\n@@@@@@@@@@@@@ queuing data on bridge stream "'+data+'"\n');
+        if(data.length) s.queue(json(data)); 
+      }));
+    }
+  }
+
 
   return s;
 
