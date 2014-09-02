@@ -26,7 +26,7 @@ module.exports = function(options){
     connected = true;
     // auth
     if(token) {
-      console.log('NO TOKEN IN CONNECTION EVENT!');
+      //console.log('NO TOKEN IN CONNECTION EVENT!');
       send();
     }
 
@@ -85,17 +85,17 @@ module.exports = function(options){
 
   function ensureToken(data){
 
-    console.log('ENSURE TOKEN'.data);
+    //console.log('ENSURE TOKEN'.data);
 
     if(!connected) {
 
-      console.log('1 not connected');
+      //console.log('1 not connected');
       return;
     }
     if(!con.sentToken){
 
 
-      console.log('3 not sent token',token);
+      //console.log('3 not sent token',token);
 
       if(!token) {
         if(data) console.log("[ERROR] cannot send data before sending token and i have no token to send yet!");
@@ -105,11 +105,11 @@ module.exports = function(options){
       con.sentToken = true;
       con.write(JSON.stringify(token)+"\n");
 
-      console.log('4 sending token!',token);
+      ///console.log('4 sending token!',token);
 
       if(data && data.type === 'token') return true;
     } else {
-      console.log('2 sent token already');
+      //console.log('2 sent token already');
     }
   }
 
@@ -117,7 +117,7 @@ module.exports = function(options){
     if(con && !con.piped) {
       con.piped = true;
       con.pipe(split()).pipe(through(function(data){
-        console.log('\n@@@@@@@@@@@@@ queuing data on bridge stream "'+data+'"\n');
+        //console.log('\n@@@@@@@@@@@@@ queuing data on bridge stream "'+data+'"\n');
         if(data.length) s.queue(json(data)); 
       }));
     }
