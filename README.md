@@ -39,15 +39,31 @@ var bridge = require('pinoccio-server/bridge');
 
 ```
 
-SETUP
-=====
+### Connect your Troop to your server
 
-- you will need to update your firmware to connect to your local server.
-  - check out https://pinocc.io/solo for help getting started with the arduino ide
-- update the ip adress to point to your local server
-  - https://github.com/Pinoccio/library-pinoccio/blob/master/src/hq/HqInfo.cpp#L18
-- test with the example server
-  - `./bin/server.js`
-- write a local server!
-  - you can base it off of the example server in bin/server.js! expose your own http interface whatever you need!
+#### Option 1: Using Bridge Mode
+
+Plug in your Scout (USB), turn it on, and bridge it (in a new terminal tab)...
+
+```
+$ pinoccio bridge -v --host 127.0.0.1
+```
+
+By default, your sever will be running on localhost. We added `-v` to get verbose output, which is more fun.
+
+#### Option 2: Using a WiFi Lead Scout
+
+Set a new HQ address on the Lead Scout and reassociate the WiFi.
+
+```
+> hq.setaddress("YOUR_IP_ADDRESS"); wifi.reassociate;
+```
+
+Your Lead will disconnect from Pinoccio's HQ, and reconnect to your local server (you'll see some output in your terminal when it does).
+
+If you want to make this change stick when your Lead Scout reboots, you'll need to add it to your startup function, e.g.
+
+```
+> function startup {hq.setaddress("YOUR_IP_ADDRESS"); wifi.reassociate;}
+```
 
