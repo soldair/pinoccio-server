@@ -76,9 +76,9 @@ module.exports = function(options){
 
     if(connected) send();
   }).on('end',function(){
-    reconnect.disconnect();
+    recon.disconnect();
   }).on('error',function(){
-    reconnect.disconnect();
+    recon.disconnect();
   });
 
   s.reconnect = recon;
