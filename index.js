@@ -16,7 +16,7 @@ module.exports = function(options,onConnection){
   options.port = options.port||22756;
 
   var server = net.createServer(function(con){
-    vacr i = 0, s;
+    var i = 0, s;
 
     con.on('error',function(err){
       console.log('scout tcp connection error. '+err);
