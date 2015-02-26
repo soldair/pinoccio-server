@@ -36,10 +36,10 @@ module.exports = function(options,onConnection){
         return con.destroy();
       }
       if(options.bridge === false){
-        onConnection(s);
+        onConnection.call(this,s);
       } else {
         s.pipe(bridge({host:options.apiHost,port:options.apiPort})).pipe(s.commandStream());
-        onConnection(s);
+        onConnection.call(this,s);
       }
     });
 
