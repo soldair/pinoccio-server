@@ -79,7 +79,6 @@ module.exports = function(socket,readycb){
     stream._commandStreams[id] = s;
 
     s.id = id;
-
     return s;
 
   }

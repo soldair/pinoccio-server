@@ -7,6 +7,7 @@ var server = require('../')
 
 
 server({
+  bridge:false,
   apiHost:process.env.PINOCCIO_API||'pool.base.pinocc.io',
   apiPort:process.env.PINOCCIO_PORT||22756
 },function(troop){
@@ -27,7 +28,6 @@ server({
       light();
     });
   }()) 
-
 }).on('listening',function(){
   console.log('local pinoccio server listening on ',this.address());
 })

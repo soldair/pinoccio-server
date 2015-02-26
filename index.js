@@ -18,20 +18,29 @@ module.exports = function(options,onConnection){
   var server = net.createServer(function(con){
     var i = 0, s;
 
+
     con.on('error',function(err){
       console.log('scout tcp connection error. '+err);
       s.end();      
     })
 
     s = commands(con,function(err){
+
+      s.socket = con;
+      // support multiple connections.      
+      s.connectionId = con.remoteAddress+' | '+con.remotePort;
+
       if(err) {
         // todo figure out right way to handle this.
         console.error('could not start command stream. closing connection. ',err);
         return con.destroy();
       }
-
-      s.pipe(bridge({host:options.apiHost,port:options.apiPort})).pipe(s.commandStream());
-      onConnection(s);
+      if(options.bridge === false){
+        onConnection(s);
+      } else {
+        s.pipe(bridge({host:options.apiHost,port:options.apiPort})).pipe(s.commandStream());
+        onConnection(s);
+      }
     });
 
   });
