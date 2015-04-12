@@ -5,19 +5,25 @@ var net = require('net');
 // todo tls server. this should hold both ports open 22756 and 22757 tls
 
 module.exports = function(options,onConnection){
-  options = options||{};
-  if(typeof options === 'function') {
-    onConnection = options;
-    options = {};
+  options = _options(options);
+  if(!options.handler && onConnection) options.handler = onConnection;
+  var server = net.createServer(module.exports.handler(options));
+
+  server.listen(options.port,function(err){
+    if(err) throw err;
+  });
+
+  return server;
+}
+
+// in pinoccio-api i use this and define the servers myself. its a much better pattern.
+module.exports.handler = function(options){
+  options = _options(options);
+  if(!options.handler) {
+    throw new Error("please provide options.handler / onConnection. otherwise there isnt much point.");
   }
-
-  options.apiHost = options.apiHost||'pool.base.pinocc.io';
-  options.apiPort = options.apiPort||22756;
-  options.port = options.port||22756;
-
-  var server = net.createServer(function(con){
+  return function(con){
     var i = 0, s;
-
 
     con.on('error',function(err){
       console.log('scout tcp connection error. '+err);
@@ -35,7 +41,7 @@ module.exports = function(options,onConnection){
         console.error('could not start command stream. closing connection. ',err);
         return con.destroy();
       }
-      if(options.bridge === false){
+      if(!options.bridge){
         onConnection.call(this,s);
       } else {
         s.pipe(bridge({host:options.apiHost,port:options.apiPort})).pipe(s.commandStream());
@@ -43,14 +49,19 @@ module.exports = function(options,onConnection){
       }
     });
 
-  });
-
-  server.listen(options.port,function(err){
-    if(err) throw err;
-  });
-
-  return server;
-
+  }
 }
 
+function _options(options){
+  options = options||{};
+  if(typeof options === 'function') {
+    options.handler = options;
+    options = {};
+  }
 
+  options.apiHost = options.apiHost||'pool.base.pinocc.io';
+  options.apiPort = options.apiPort||22756;
+  options.port = options.port||22756;
+  
+  return options;
+}
