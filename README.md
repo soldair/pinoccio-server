@@ -1,3 +1,6 @@
+
+[![Build Status](https://travis-ci.org/sldair/pinoccio-server.svg)](http://travis-ci.org/soldair/pinoccio-server)
+
 pinoccio-server
 ===============
 
