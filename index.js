@@ -42,10 +42,10 @@ module.exports.handler = function(options){
         return con.destroy();
       }
       if(!options.bridge){
-        onConnection.call(this,s);
+        options.handler.call(this,s);
       } else {
         s.pipe(bridge({host:options.apiHost,port:options.apiPort})).pipe(s.commandStream());
-        onConnection.call(this,s);
+        options.handler.call(this,s);
       }
     });
 
